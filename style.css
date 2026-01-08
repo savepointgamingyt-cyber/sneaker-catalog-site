@@ -180,10 +180,12 @@ input::placeholder{color: rgba(170,178,214,.65)}
   overflow:hidden;
   box-shadow: 0 14px 50px rgba(0,0,0,.45);
 }
-.card .media{
-  position: relative;
+.card .media{position: relative;
   aspect-ratio: 4 / 3;
   background: rgba(255,255,255,.04);
+border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0,0,0,.35);
 }
 .card img.main{
   width:100%;
@@ -191,8 +193,7 @@ input::placeholder{color: rgba(170,178,214,.65)}
   object-fit: cover;
   display:block;
 }
-.navBtn{
-  position:absolute;
+.navBtn{position:absolute;
   top: 50%;
   transform: translateY(-50%);
   width: 44px;
@@ -204,9 +205,16 @@ input::placeholder{color: rgba(170,178,214,.65)}
   display:grid;
   place-items:center;
   cursor:pointer;
+position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
 }
-.navBtn.left{left: 10px}
-.navBtn.right{right: 10px}
+.navBtn.left{left: 10px
+left:12px;
+}
+.navBtn.right{right: 10px
+right:12px;
+}
 
 .thumbs{
   display:flex;
@@ -388,3 +396,35 @@ input::placeholder{color: rgba(170,178,214,.65)}
 .btn--ghost{background: rgba(255,255,255,.04); border:1px solid var(--stroke);}
 .btn--ghost:hover{background: rgba(255,255,255,.09);}
 /* --- /Compatibility --- */
+
+/* Ensure mobile selects keep dark theme */
+select.input, .input, input.input{
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: rgba(12,18,35,.55);
+  color: #eaf0ff;
+}
+select.input{
+  background-image: linear-gradient(45deg, transparent 50%, rgba(234,240,255,.75) 50%),
+                    linear-gradient(135deg, rgba(234,240,255,.75) 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+#overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(3px);
+  z-index: 30;
+}
+@media (max-width: 900px){
+  .filters{z-index: 40;}
+}
+
+@media (max-width: 520px){
+  .cta{display:flex; gap:12px;}
+  .cta .btn{flex:1; padding:14px 14px; font-size:15px;}
+}
