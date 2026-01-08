@@ -232,63 +232,81 @@ body{
 }
 
 
-/* Promo bar */
-.promo-bar{
-  margin: 10px 16px 0;
-  padding: 10px;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 8px;
-  align-items: center;
-}
-@media (max-width: 560px){
-  .promo-bar{ grid-template-columns: 1fr 1fr; }
-  .promo-status{ grid-column: 1 / -1; }
-}
-.promo-input{
-  width: 100%;
-  padding: 11px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  outline: none;
-}
-.promo-input::placeholder{ color: rgba(154,164,178,.7); }
-.promo-btn{
-  padding: 11px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: rgba(124,58,237,.9);
-  color: #fff;
-  font-weight: 900;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.promo-btn:hover{ filter: brightness(1.05); }
-.promo-btn--ghost{
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-  font-weight: 800;
-}
-.promo-status{
-  font-size: 12px;
-  color: var(--muted);
-  margin-left: 2px;
+/* =========================
+   Mobile адаптация
+   ========================= */
+.pill--filters{ display:none; }
+
+@media (max-width: 720px){
+  header{ padding: 12px 14px; border-radius: 0 0 16px 16px; }
+  header .title h1{ font-size: 18px; }
+  header .title p{ font-size: 12px; }
+  header .actions{ gap: 8px; }
+  .pill--filters{ display:inline-flex; }
+
+  /* Скрываем блок фильтров по умолчанию, открываем кнопкой */
+  .controls{ display:none; }
+  body.show-controls .controls{ display:block; }
+
+  .controls{ padding: 14px; }
+  .controls__mobilebar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .controls__mobiletitle{
+    font-weight:700;
+    letter-spacing:.2px;
+  }
+
+  .filters{
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .filters .search{ grid-column: 1 / -1; }
+  .filters .field label{ font-size: 12px; }
+  .filters input, .filters select{
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .promo-box{
+    padding: 14px;
+    margin-top: 14px;
+  }
+  .promo-actions{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .promo-actions .btn, .promo-actions .pill{
+    width: 100%;
+    justify-content: center;
+  }
+
+  .grid{ gap: 14px; margin-top: 14px; }
+  .card{ border-radius: 18px; }
+  .card .top{ padding: 12px; }
+  .info{ padding: 12px; }
+
+  .thumbs{ padding: 10px 10px 12px; }
+  .thumbs img{ width: 54px; height: 54px; }
+  .arrow{
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .name{ font-size: 15px; }
+  .meta{ font-size: 12px; }
+  .price{ font-size: 20px; }
+  .sizes{ gap: 8px; }
+  .size-pill{ padding: 9px 10px; font-size: 13px; }
+  .cta{ gap: 10px; }
+  .btn{ height: 48px; font-size: 15px; }
 }
 
-/* Discounted price */
-.priceWrap{ display:flex; flex-direction:column; gap:2px; }
-.priceOld{
-  font-size: 13px;
-  color: rgba(154,164,178,.9);
-  text-decoration: line-through;
-}
-.priceSave{
-  font-size: 12px;
-  color: #bbf7d0;
-  opacity: .95;
-}
+/* По умолчанию мобильная панель скрыта на десктопе */
+.controls__mobilebar{ display:none; }

@@ -18,12 +18,19 @@
     </div>
 
     <div class="actions">
+      <button id="filtersToggle" class="pill pill--ghost pill--filters" type="button" aria-expanded="false">Фильтры</button>
+      
       <a class="pill" id="openSheet" href="#" target="_blank" rel="noreferrer">Таблица</a>
       <button class="pill pill--ghost" id="refreshBtn" title="Перезагрузить данные">Обновить</button>
     </div>
   </header>
 
   <section class="controls">
+    <div class="controls__mobilebar">
+      <div class="controls__mobiletitle">Фильтры</div>
+      <button id="filtersClose" class="pill pill--ghost" type="button">Скрыть</button>
+    </div>
+
     <div class="control control--search">
       <label class="label" for="q">Поиск</label>
       <input id="q" class="input" placeholder="Nike Dunk, Samba, код NK-DUNK-023…" autocomplete="off" />

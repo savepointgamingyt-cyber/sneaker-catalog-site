@@ -4,22 +4,6 @@
 // =========================
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0jBSjWhb8LlSj_nyeq_yQhRh889UhEwV-HjQM1MFNsA6Ou3ISYiaZYpBkBdPdxVJbwlB4TxsYHuiK/pub?gid=185458680&single=true&output=csv";
 const TG_USERNAME = "Kuharen7"; // без @
-const TG_CHANNEL_URL = `https://t.me/${TG_USERNAME}`; // ссылка на канал/профиль для кнопки "забрать код"
-// (необязательно) CSV с промокодами (лист PROMO → Опубликовать в интернете → CSV)
-// Колонки: code,type,value,min_price,active
-// Пример: ROOM300,fixed,300,2500,TRUE
-const PROMO_CSV_URL = ""; // вставь CSV ссылку на лист PROMO (если хочешь управлять кодами из таблицы)
-
-// (запасной вариант) промокоды прямо здесь (работает даже без PROMO_CSV_URL)
-// fixed = скидка в рублях, percent = процент
-const PROMO_FALLBACK = {
-  ROOM200: { type: "fixed", value: 200, min_price: 0, active: true },
-  ROOM300: { type: "fixed", value: 300, min_price: 0, active: true },
-  OTZIV500: { type: "fixed", value: 500, min_price: 3000, active: true },
-  SALE7: { type: "percent", value: 7, min_price: 4000, active: true },
-};
-
-const PROMO_STORAGE_KEY = "sneaker_catalog_promo_v1";
 // (необязательно) ссылка на саму таблицу (для кнопки "Таблица")
 const SHEET_URL = "";
 
@@ -101,160 +85,6 @@ function statusText(s) {
 function money(v) {
   const n = Number(String(v).replace(/\s+/g, ""));
   return Number.isFinite(n) ? n.toLocaleString("ru-RU") : v;
-}
-
-function toNumber(v) {
-  const n = Number(String(v ?? "").replace(/\s+/g, "").replace(/[^\d.]/g, ""));
-  return Number.isFinite(n) ? n : 0;
-}
-
-// =========================
-// PROMO (логика)
-// =========================
-let PROMO_MAP = new Map();
-let APPLIED_PROMO = null; // {code,type,value,min_price,active}
-// последнее, что вводил пользователь (для понятного сообщения в Telegram,
-// даже если промокод не применился)
-let LAST_PROMO_ATTEMPT = "";
-
-function normalizePromoCode(s) {
-  return String(s || "").trim().toUpperCase();
-}
-
-function setPromoStatus(text, ok = true) {
-  const elStatus = document.getElementById("promoStatus");
-  if (!elStatus) return;
-  elStatus.textContent = text;
-  elStatus.style.color = ok ? "#37d67a" : "#ff5a5a";
-}
-
-function computeDiscount(basePrice, promo) {
-  if (!promo || !promo.active) return { final: basePrice, discount: 0 };
-  const minPrice = toNumber(promo.min_price);
-  if (minPrice && basePrice < minPrice) return { final: basePrice, discount: 0 };
-
-  let discount = 0;
-  if (promo.type === "fixed") discount = toNumber(promo.value);
-  else if (promo.type === "percent") discount = Math.round(basePrice * (toNumber(promo.value) / 100));
-
-  const final = Math.max(basePrice - discount, 0);
-  return { final, discount };
-}
-
-function applyPromo(codeRaw) {
-  const code = normalizePromoCode(codeRaw);
-  const input = document.getElementById("promoInput");
-
-  if (!code) {
-    APPLIED_PROMO = null;
-    try { localStorage.removeItem(PROMO_STORAGE_KEY); } catch {}
-    if (input) input.value = "";
-    setPromoStatus("Промокод сброшен.", true);
-    render();
-    return;
-  }
-
-  const promo = PROMO_MAP.get(code);
-  if (!promo || !promo.active) {
-    APPLIED_PROMO = null;
-    try { localStorage.removeItem(PROMO_STORAGE_KEY); } catch {}
-    LAST_PROMO_ATTEMPT = code;
-    setPromoStatus("Промокод не найден или неактивен.", false);
-    render();
-    return;
-  }
-
-  APPLIED_PROMO = { ...promo, code };
-  LAST_PROMO_ATTEMPT = code;
-  try { localStorage.setItem(PROMO_STORAGE_KEY, code); } catch {}
-  if (input) input.value = code;
-  setPromoStatus(`Промокод применён: ${code}`, true);
-  render();
-}
-
-async function loadPromos() {
-  // 1) fallback
-  PROMO_MAP = new Map();
-  Object.entries(PROMO_FALLBACK || {}).forEach(([code, p]) => {
-    const c = normalizePromoCode(code);
-    PROMO_MAP.set(c, {
-      type: String(p.type || "fixed"),
-      value: toNumber(p.value),
-      min_price: toNumber(p.min_price),
-      active: Boolean(p.active),
-    });
-  });
-
-  // 2) override from CSV (если задан)
-  if (PROMO_CSV_URL && !PROMO_CSV_URL.startsWith("PASTE_")) {
-    try {
-      const res = await fetch(PROMO_CSV_URL, { cache: "no-store" });
-      const text = await res.text();
-      const rows = parseCSV(text);
-      rows.forEach(r => {
-        const c = normalizePromoCode(r.code);
-        if (!c) return;
-        const active = String(r.active).toUpperCase() === "TRUE" || String(r.active) === "1";
-        PROMO_MAP.set(c, {
-          type: String(r.type || "fixed").toLowerCase(),
-          value: toNumber(r.value),
-          min_price: toNumber(r.min_price),
-          active,
-        });
-      });
-    } catch (e) {
-      console.warn("Не удалось загрузить PROMO_CSV_URL, использую PROMO_FALLBACK", e);
-    }
-  }
-
-  // восстановим промокод
-  try {
-    const saved = localStorage.getItem(PROMO_STORAGE_KEY);
-    const code = normalizePromoCode(saved);
-    if (code && PROMO_MAP.has(code) && PROMO_MAP.get(code).active) {
-      APPLIED_PROMO = { ...PROMO_MAP.get(code), code };
-    }
-  } catch {}
-}
-
-function ensurePromoBar() {
-  if (document.getElementById("promoBar")) return;
-
-  // вставим над каталогом
-  const wrap = document.createElement("div");
-  wrap.id = "promoBar";
-  wrap.className = "promo-bar";
-  wrap.innerHTML = `
-    <div class="promo-head">
-      <div class="promo-title">Промокод для подписчиков</div>
-      <div class="promo-sub">Подписка не обязательна, но даёт скидки и доступ к кодам недели.</div>
-    </div>
-    <div class="promo-row">
-      <input id="promoInput" class="promo-input" placeholder="Промокод (например ROOM300)" autocomplete="off" />
-      <button id="promoApplyBtn" class="promo-btn" type="button">Применить</button>
-      <button id="promoResetBtn" class="promo-btn promo-btn--ghost" type="button">Сбросить</button>
-      <a id="promoCtaBtn" class="promo-cta" href="${TG_CHANNEL_URL}" target="_blank" rel="noreferrer">Забрать код в Telegram</a>
-    </div>
-    <div id="promoStatus" class="promo-status"></div>
-  `;
-
-  const parent = el.grid?.parentElement;
-  if (parent) parent.insertBefore(wrap, el.grid);
-  else document.body.prepend(wrap);
-
-  // handlers
-  const input = document.getElementById("promoInput");
-  const applyBtn = document.getElementById("promoApplyBtn");
-  const resetBtn = document.getElementById("promoResetBtn");
-
-  if (input && APPLIED_PROMO?.code) input.value = APPLIED_PROMO.code;
-  if (APPLIED_PROMO?.code) setPromoStatus(`Промокод применён: ${APPLIED_PROMO.code}`, true);
-
-  if (applyBtn) applyBtn.addEventListener("click", () => applyPromo(input?.value || ""));
-  if (resetBtn) resetBtn.addEventListener("click", () => applyPromo(""));
-  if (input) input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") applyPromo(input.value);
-  });
 }
 
 function escapeHtml(str) {
@@ -351,7 +181,6 @@ function applyFilters() {
 }
 
 function render() {
-  ensurePromoBar();
   setMeta(`Показано: ${FILTERED.length} из ${PRODUCTS.length}`);
 
   if (!FILTERED.length) {
@@ -404,36 +233,8 @@ function attachCardEvents() {
       btn.addEventListener("click", () => {
         const chosen = selectedSizeByCode.get(code);
         const sizePart = chosen && chosen.eu ? `, размер ${chosen.eu}${chosen.cm ? ` (${chosen.cm} см)` : ""}` : "";
-        const basePrice = toNumber(p.price);
-        const dd = computeDiscount(basePrice, APPLIED_PROMO);
-
-        const lines = [];
-        lines.push(`Хочу: ${p.brand} ${p.model}`);
-        lines.push(`Код: ${code}`);
-        if (chosen && chosen.eu) lines.push(`Размер: ${chosen.eu}${chosen.cm ? ` (${chosen.cm} см)` : ""}`);
-
-        if (dd.discount > 0 && APPLIED_PROMO?.code) {
-          lines.push(`Цена: ${money(basePrice)} ₽ → ${money(dd.final)} ₽`);
-          lines.push(`Промокод: ${APPLIED_PROMO.code} (−${money(dd.discount)} ₽)`);
-        } else {
-          lines.push(`Цена: ${money(basePrice)} ₽`);
-        }
-
-        
-        // статус промокода (чтобы было понятно в Telegram)
-        if (!(dd.discount > 0 && APPLIED_PROMO?.code)) {
-          if (LAST_PROMO_ATTEMPT) lines.push(`Промокод: ${LAST_PROMO_ATTEMPT} (не применился)`);
-          else lines.push(`Промокод: нет`);
-        }
-const msg = encodeURIComponent(lines.join("\n"));
-        const url = `https://t.me/${TG_USERNAME}?text=${msg}`;
-        const a = document.createElement("a");
-        a.href = url;
-        a.target = "_blank";
-        a.rel = "noopener";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        const msg = encodeURIComponent(`Хочу ${code}${sizePart}`);
+        window.open(`https://t.me/${TG_USERNAME}?text=${msg}`, "_blank");
       });
     }
 
@@ -534,16 +335,6 @@ function renderCard(p) {
        ${thumbsHtml}`
     : `<div class="photoWrap"><div class="photo" aria-hidden="true"></div></div>`;
 
-  const basePrice = toNumber(p.price);
-  const dd = computeDiscount(basePrice, APPLIED_PROMO);
-  const priceHtml = dd.discount > 0
-    ? `<div class="priceWrap">
-         <div class="priceOld">${money(basePrice)} ₽</div>
-         <div class="price">${money(dd.final)} ₽</div>
-         <div class="priceSave">−${money(dd.discount)} ₽</div>
-       </div>`
-    : `<div class="price">${money(basePrice)} ₽</div>`;
-
   return `
     <article class="card">
       ${photoBlock}
@@ -551,14 +342,14 @@ function renderCard(p) {
         <div class="title">${escapeHtml(p.brand)} · ${escapeHtml(p.model)}</div>
         <div class="sub">${escapeHtml(sub)}</div>
         <div class="row">
-          ${priceHtml}
+          <div class="price">${money(p.price)} ₽</div>
           <div class="badge ${st.cls}">${st.text}</div>
         </div>
         <div class="sizes"><b>Размеры:</b></div>
         <div class="chips" data-chips="${escapeHtml(code)}">${sizeChips}</div>
       </div>
       <div class="cta">
-        <button type="button" class="btn" data-buy="${escapeHtml(code)}">Написать в Telegram</button>
+        <button class="btn" data-buy="${escapeHtml(code)}">Написать в Telegram</button>
         <button class="btn btn--ghost" data-copy="${escapeHtml(code)}" title="Скопировать код">Код</button>
       </div>
     </article>
@@ -658,46 +449,50 @@ el.refreshBtn.addEventListener("click", () => fetchProducts(true));
   el.sort.addEventListener(evt, applyFilters);
 });
 
-// сначала промокоды, потом товары
-(async function init() {
-  await loadPromos();
-  // бар появится при первом render(), но мы можем создать его заранее
-  ensurePromoBar();
 
-  // автоподстановка промокода из ссылки: ?promo=ROOM300
-  try {
-    const sp = new URLSearchParams(window.location.search);
-    const qp = sp.get("promo");
-    if (qp) applyPromo(qp);
-  } catch {}
+// =========================
+// mobile controls toggle
+// =========================
+(function setupMobileControls(){
+  const btnOpen = document.getElementById("filtersToggle");
+  const btnClose = document.getElementById("filtersClose");
+  const controls = document.getElementById("controls");
+  if (!btnOpen || !controls) return;
 
-  fetchProducts(false);
+  const setState = (isOpen) => {
+    document.body.classList.toggle("show-controls", isOpen);
+    btnOpen.setAttribute("aria-expanded", String(isOpen));
+  };
+
+  btnOpen.addEventListener("click", () => {
+    const isOpen = !document.body.classList.contains("show-controls");
+    setState(isOpen);
+    if (isOpen) controls.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  if (btnClose) {
+    btnClose.addEventListener("click", () => setState(false));
+  }
+
+  // Close filters after selecting something on mobile (optional UX)
+  const closeOnMobile = () => {
+    if (window.matchMedia("(max-width: 720px)").matches) setState(false);
+  };
+  ["change"].forEach(evt => {
+    el.sex.addEventListener(evt, closeOnMobile);
+    el.brand.addEventListener(evt, closeOnMobile);
+    el.size.addEventListener(evt, closeOnMobile);
+    el.status.addEventListener(evt, closeOnMobile);
+    el.sort.addEventListener(evt, closeOnMobile);
+  });
+
+  window.addEventListener("resize", () => {
+    // On desktop, always show controls without needing the toggle
+    if (!window.matchMedia("(max-width: 720px)").matches) {
+      document.body.classList.remove("show-controls");
+      btnOpen.setAttribute("aria-expanded", "false");
+    }
+  });
 })();
 
-// ---------- PROMO styles fallback (если в style.css нет классов) ----------
-// Ничего не сломает: просто добавит минимальный CSS.
-(function injectPromoCss() {
-  const id = "promoCssFallback";
-  if (document.getElementById(id)) return;
-  const css = `
-    .promo-bar{display:flex;flex-direction:column;gap:10px;margin:10px 0 14px;padding:14px 14px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg, rgba(124,58,237,.18), rgba(34,197,94,.10))}
-    .promo-head{display:flex;flex-direction:column;gap:2px}
-    .promo-title{font-weight:800;font-size:15px}
-    .promo-sub{font-size:13px;opacity:.82}
-    .promo-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .promo-input{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#0f1720;color:#fff;min-width:220px}
-    .promo-input::placeholder{color:#7a8797}
-    .promo-btn{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#7c3aed;color:#fff;font-weight:700;cursor:pointer}
-    .promo-btn--ghost{background:transparent}
-    .promo-cta{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#22c55e;color:#052e20;font-weight:800;text-decoration:none}
-    .promo-cta:hover{filter:brightness(1.05)}
-    .promo-status{font-size:13px}
-    .promo-status--ok{color:#22c55e}
-    .promo-status--bad{color:#ef4444}
-  `;
-  const st = document.createElement("style");
-  st.id = id;
-  st.textContent = css;
-  document.head.appendChild(st);
-})();
-
+fetchProducts(false);
