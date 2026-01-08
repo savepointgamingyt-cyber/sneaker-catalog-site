@@ -2,7 +2,19 @@
 // =========================
 // НАСТРОЙКИ (поменяй 2 строки)
 // =========================
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0jBSjWhb8LlSj_nyeq_yQhRh889UhEwV-HjQM1MFNsA6Ou3ISYiaZYpBkBdPdxVJbwlB4TxsYHuiK/pub?gid=185458680&single=true&output=csv";
+const DEFAULT_CSV_URL = "PASTE_CSV_URL_HERE";
+// You can set CSV link without editing code:
+// 1) Add ?csv=YOUR_LINK to the site URL, or
+// 2) Paste it once into the in-page prompt (it will be saved in this browser).
+function resolveCsvUrl(){
+  const qs = new URLSearchParams(location.search);
+  const fromQs = qs.get("csv");
+  const fromWin = window.__CSV_URL__;
+  const fromLs = localStorage.getItem("CSV_URL");
+  return (fromWin || fromQs || fromLs || DEFAULT_CSV_URL || "").trim();
+}
+let CSV_URL = resolveCsvUrl();
+
 const TG_USERNAME = "Kuharen7"; // без @
 // (необязательно) ссылка на саму таблицу (для кнопки "Таблица")
 const SHEET_URL = "";
@@ -105,48 +117,6 @@ function productSearchBlob(p) {
 // =========================
 // UI
 // =========================
-// ===== Promo codes =====
-const PROMOS = {
-  "ROOM300": { type: "fixed", value: 300 } // -300 ₽
-};
-let ACTIVE_PROMO = (localStorage.getItem("activePromo") || "").trim().toUpperCase();
-function promoConfig(){
-  return PROMOS[ACTIVE_PROMO] || null;
-}
-function applyPromoToPrice(base){
-  const cfg = promoConfig();
-  if(!cfg) return { final: base, delta: 0 };
-  if(cfg.type === "fixed"){
-    const delta = Math.min(cfg.value, Math.max(0, base));
-    return { final: Math.max(0, base - delta), delta };
-  }
-  return { final: base, delta: 0 };
-}
-function priceModel(p){
-  const base = toNumber(p.price);
-  const old = toNumber(p.old_price);
-  const promo = applyPromoToPrice(base);
-  const finalPrice = promo.final;
-  const delta = promo.delta;
-  // pick the best old price to show (old_price if it's higher, otherwise base when promo is active)
-  const showOld = (old && old > finalPrice) ? old : ((delta > 0 && base > finalPrice) ? base : 0);
-  return { base, old, final: finalPrice, delta, showOld };
-}
-function priceHTML(p){
-  const m = priceModel(p);
-  const oldStr = m.showOld ? `<span class="price-old">${money(m.showOld)} ₽</span>` : "";
-  const deltaStr = m.delta ? `<div class="price-delta">−${money(m.delta)} ₽ по промокоду</div>` : "";
-  return `
-    <div class="price-wrap">
-      <div class="price-line">
-        ${oldStr}
-        <span class="price-final">${money(m.final)} ₽</span>
-      </div>
-      ${deltaStr}
-    </div>
-  `;
-}
-
 const el = {
   grid: document.getElementById("grid"),
   meta: document.getElementById("meta"),
@@ -158,16 +128,6 @@ const el = {
   sort: document.getElementById("sort"),
   refreshBtn: document.getElementById("refreshBtn"),
   openSheet: document.getElementById("openSheet"),
-
-  filtersToggle: document.getElementById("filtersToggle"),
-  filtersClose: document.getElementById("filtersClose"),
-  filtersBackdrop: document.getElementById("filtersBackdrop"),
-  promoInput: document.getElementById("promoInput"),
-  promoApply: document.getElementById("promoApply"),
-  promoReset: document.getElementById("promoReset"),
-  promoTelegram: document.getElementById("promoTelegram"),
-  promoMsg: document.getElementById("promoMsg"),
-
 };
 
 let PRODUCTS = [];
@@ -236,8 +196,29 @@ function render() {
   setMeta(`Показано: ${FILTERED.length} из ${PRODUCTS.length}`);
 
   if (!FILTERED.length) {
-    el.grid.innerHTML = `<div class="skeleton">Ничего не найдено. Попробуй убрать фильтры или изменить запрос.</div>`;
+    el.grid.innerHTML = `<div class="skeleton">
+  <b>Каталог не загружается — нет правильной CSV‑ссылки.</b><br>
+  1) Открой Google Sheets → <b>Файл → Опубликовать в интернете</b> → формат <b>CSV</b>.<br>
+  2) Скопируй ссылку и вставь сюда:
+  <div class="csv-setup">
+    <input id="csvUrlInput" class="input" placeholder="Вставь CSV ссылку из Google Sheets" />
+    <button id="csvUrlSave" class="btn primary">Сохранить</button>
+  </div>
+  <div class="muted">Лайфхак: можно также открыть сайт так: <code>?csv=ВАША_ССЫЛКА</code>. Ссылка сохранится в браузере.</div>
+</div>`;
+const inp = document.getElementById("csvUrlInput");
+const btn = document.getElementById("csvUrlSave");
+if (inp) inp.value = (CSV_URL && !CSV_URL.startsWith("PASTE_")) ? CSV_URL : "";
+btn?.addEventListener("click", () => {
+  const val = (inp?.value || "").trim();
+  if (!val || !val.includes("pub") || !val.includes("output=csv")) {
+    alert("Похоже, это не CSV ссылка. В конце должно быть output=csv");
     return;
+  }
+  localStorage.setItem("CSV_URL", val);
+  location.href = location.pathname + "?v=" + Date.now();
+});
+return;
   }
 
   el.grid.innerHTML = FILTERED.map(p => renderCard(p)).join("");
@@ -394,7 +375,7 @@ function renderCard(p) {
         <div class="title">${escapeHtml(p.brand)} · ${escapeHtml(p.model)}</div>
         <div class="sub">${escapeHtml(sub)}</div>
         <div class="row">
-          ${priceHTML(p)}
+          <div class="price">${money(p.price)} ₽</div>
           <div class="badge ${st.cls}">${st.text}</div>
         </div>
         <div class="sizes"><b>Размеры:</b></div>
@@ -428,7 +409,7 @@ function saveCache(items) {
 }
 
 async function fetchProducts(force = false) {
-  if (!CSV_URL || CSV_URL.startsWith("PASTE_")) {
+  if (!CSV_URL || CSV_URL.startsWith("PASTE_") || CSV_URL.includes("...") || CSV_URL.includes("PASTE_CSV")) {
     el.grid.innerHTML = `<div class="skeleton">
       <b>Нужно вставить CSV ссылку.</b><br>
       Google Sheets → Файл → Опубликовать в интернете → CSV.<br>
@@ -500,5 +481,51 @@ el.refreshBtn.addEventListener("click", () => fetchProducts(true));
   el.status.addEventListener(evt, applyFilters);
   el.sort.addEventListener(evt, applyFilters);
 });
+
+
+// =========================
+// mobile controls toggle
+// =========================
+(function setupMobileControls(){
+  const btnOpen = document.getElementById("filtersToggle");
+  const btnClose = document.getElementById("filtersClose");
+  const controls = document.getElementById("controls");
+  if (!btnOpen || !controls) return;
+
+  const setState = (isOpen) => {
+    document.body.classList.toggle("show-controls", isOpen);
+    btnOpen.setAttribute("aria-expanded", String(isOpen));
+  };
+
+  btnOpen.addEventListener("click", () => {
+    const isOpen = !document.body.classList.contains("show-controls");
+    setState(isOpen);
+    if (isOpen) controls.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  if (btnClose) {
+    btnClose.addEventListener("click", () => setState(false));
+  }
+
+  // Close filters after selecting something on mobile (optional UX)
+  const closeOnMobile = () => {
+    if (window.matchMedia("(max-width: 720px)").matches) setState(false);
+  };
+  ["change"].forEach(evt => {
+    el.sex.addEventListener(evt, closeOnMobile);
+    el.brand.addEventListener(evt, closeOnMobile);
+    el.size.addEventListener(evt, closeOnMobile);
+    el.status.addEventListener(evt, closeOnMobile);
+    el.sort.addEventListener(evt, closeOnMobile);
+  });
+
+  window.addEventListener("resize", () => {
+    // On desktop, always show controls without needing the toggle
+    if (!window.matchMedia("(max-width: 720px)").matches) {
+      document.body.classList.remove("show-controls");
+      btnOpen.setAttribute("aria-expanded", "false");
+    }
+  });
+})();
 
 fetchProducts(false);
