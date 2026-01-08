@@ -118,6 +118,68 @@ const el = {
   openSheet: document.getElementById("openSheet"),
 };
 
+// --- Mobile UI + Promocode (added) ---
+const ui = {
+  filtersToggle: document.getElementById("filtersToggle"),
+  filtersHide: document.getElementById("filtersHide"),
+  filtersPanel: document.getElementById("filtersPanel"),
+  overlay: document.getElementById("overlay"),
+  promoInput: document.getElementById("promoInput"),
+  promoApply: document.getElementById("promoApply"),
+  promoReset: document.getElementById("promoReset"),
+  promoTelegram: document.getElementById("promoTelegram"),
+  promoHint: document.getElementById("promoHint"),
+};
+
+function setFiltersOpen(open){
+  if(!ui.filtersPanel) return;
+  document.body.classList.toggle("filters-open", !!open);
+  if(ui.overlay) ui.overlay.hidden = !open;
+}
+if(ui.filtersToggle) ui.filtersToggle.addEventListener("click", ()=> setFiltersOpen(!document.body.classList.contains("filters-open")));
+if(ui.filtersHide) ui.filtersHide.addEventListener("click", ()=> setFiltersOpen(false));
+if(ui.overlay) ui.overlay.addEventListener("click", ()=> setFiltersOpen(false));
+
+const PROMO_CODES = {
+  "ROOM300": 300,
+};
+function normalizePromo(v){
+  return String(v || "").trim().toUpperCase().replace(/\s+/g,"");
+}
+let appliedPromo = normalizePromo(localStorage.getItem("promo_code") || "");
+function promoDiscount(){
+  return PROMO_CODES[appliedPromo] || 0;
+}
+function setPromo(code){
+  appliedPromo = normalizePromo(code);
+  if(!PROMO_CODES[appliedPromo]) appliedPromo = "";
+  localStorage.setItem("promo_code", appliedPromo);
+  if(ui.promoInput) ui.promoInput.value = appliedPromo;
+  if(ui.promoHint){
+    ui.promoHint.textContent = appliedPromo
+      ? `Промокод применён: ${appliedPromo}`
+      : "Промокод не применён.";
+  }
+}
+if(ui.promoApply) ui.promoApply.addEventListener("click", ()=>{
+  const code = ui.promoInput ? ui.promoInput.value : "";
+  setPromo(code);
+  // Перерисуем карточки, чтобы пересчитать цены
+  try { render(); } catch(e) {}
+});
+if(ui.promoReset) ui.promoReset.addEventListener("click", ()=>{
+  if(ui.promoInput) ui.promoInput.value = "";
+  setPromo("");
+  try { render(); } catch(e) {}
+});
+// Если у тебя есть Telegram-бот/канал — вставь сюда ссылку:
+if(ui.promoTelegram){
+  ui.promoTelegram.href = "https://t.me/";
+}
+setPromo(appliedPromo);
+// --- /Mobile UI + Promocode ---
+
+
 let PRODUCTS = [];
 let FILTERED = [];
 
@@ -342,7 +404,15 @@ function renderCard(p) {
         <div class="title">${escapeHtml(p.brand)} · ${escapeHtml(p.model)}</div>
         <div class="sub">${escapeHtml(sub)}</div>
         <div class="row">
-          <div class="price">${money(p.price)} ₽</div>
+          ${promoDiscount() ? `
+            <div class="priceBlock">
+              <div class="priceOld">${money(p.price)} ₽</div>
+              <div class="price">${money(Math.max(0, p.price - promoDiscount()))} ₽</div>
+              <div class="discountLine">-${money(promoDiscount())} ₽</div>
+            </div>
+          ` : `
+            <div class="price">${money(p.price)} ₽</div>
+          `}
           <div class="badge ${st.cls}">${st.text}</div>
         </div>
         <div class="sizes"><b>Размеры:</b></div>
@@ -448,51 +518,5 @@ el.refreshBtn.addEventListener("click", () => fetchProducts(true));
   el.status.addEventListener(evt, applyFilters);
   el.sort.addEventListener(evt, applyFilters);
 });
-
-
-// =========================
-// mobile controls toggle
-// =========================
-(function setupMobileControls(){
-  const btnOpen = document.getElementById("filtersToggle");
-  const btnClose = document.getElementById("filtersClose");
-  const controls = document.getElementById("controls");
-  if (!btnOpen || !controls) return;
-
-  const setState = (isOpen) => {
-    document.body.classList.toggle("show-controls", isOpen);
-    btnOpen.setAttribute("aria-expanded", String(isOpen));
-  };
-
-  btnOpen.addEventListener("click", () => {
-    const isOpen = !document.body.classList.contains("show-controls");
-    setState(isOpen);
-    if (isOpen) controls.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-
-  if (btnClose) {
-    btnClose.addEventListener("click", () => setState(false));
-  }
-
-  // Close filters after selecting something on mobile (optional UX)
-  const closeOnMobile = () => {
-    if (window.matchMedia("(max-width: 720px)").matches) setState(false);
-  };
-  ["change"].forEach(evt => {
-    el.sex.addEventListener(evt, closeOnMobile);
-    el.brand.addEventListener(evt, closeOnMobile);
-    el.size.addEventListener(evt, closeOnMobile);
-    el.status.addEventListener(evt, closeOnMobile);
-    el.sort.addEventListener(evt, closeOnMobile);
-  });
-
-  window.addEventListener("resize", () => {
-    // On desktop, always show controls without needing the toggle
-    if (!window.matchMedia("(max-width: 720px)").matches) {
-      document.body.classList.remove("show-controls");
-      btnOpen.setAttribute("aria-expanded", "false");
-    }
-  });
-})();
 
 fetchProducts(false);

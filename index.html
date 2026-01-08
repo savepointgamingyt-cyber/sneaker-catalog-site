@@ -2,98 +2,95 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Каталог кроссовок</title>
-  <meta name="description" content="Каталог кроссовок с фильтрами и размерами EU (CM), фото из Google Drive." />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="header">
+  <header class="topbar">
     <div class="brand">
-      <div class="logo">👟</div>
-      <div>
-        <div class="brand__title">Каталог кроссовок</div>
-        <div class="brand__sub">Фото 1–8 · EU + CM</div>
+      <div class="logo" aria-hidden="true">👟</div>
+      <div class="brand-text">
+        <div class="brand-title">Каталог кроссовок</div>
+        <div class="brand-sub">Фото 1–8 · EU + CM</div>
       </div>
     </div>
 
-    <div class="actions">
-      <button id="filtersToggle" class="pill pill--ghost pill--filters" type="button" aria-expanded="false">Фильтры</button>
-      
-      <a class="pill" id="openSheet" href="#" target="_blank" rel="noreferrer">Таблица</a>
-      <button class="pill pill--ghost" id="refreshBtn" title="Перезагрузить данные">Обновить</button>
+    <div class="topbar-actions">
+      <button class="btn ghost" id="filtersToggle" type="button">Фильтры</button>
+      <button class="btn ghost" id="refreshBtn" type="button">Обновить</button>
     </div>
   </header>
 
-  <section class="controls">
-    <div class="controls__mobilebar">
-      <div class="controls__mobiletitle">Фильтры</div>
-      <button id="filtersClose" class="pill pill--ghost" type="button">Скрыть</button>
-    </div>
+  <main class="wrap">
+    <!-- Filters panel -->
+    <section class="panel filters" id="filtersPanel" aria-label="Фильтры">
+      <div class="filters-head">
+        <div class="filters-title">Фильтры</div>
+        <button class="btn ghost small" id="filtersHide" type="button">Скрыть</button>
+      </div>
 
-    <div class="control control--search">
-      <label class="label" for="q">Поиск</label>
-      <input id="q" class="input" placeholder="Nike Dunk, Samba, код NK-DUNK-023…" autocomplete="off" />
-    </div>
+      <div class="filters-grid">
+        <label class="field">
+          <span class="label">Поиск</span>
+          <input id="q" type="search" placeholder="Nike Dunk, Samba, код…" autocomplete="off" />
+        </label>
 
-    <div class="control">
-      <label class="label" for="sex">Пол</label>
-      <select id="sex" class="select">
-        <option value="">Все</option>
-        <option value="M">Мужские</option>
-        <option value="W">Женские</option>
-        <option value="Z">Зимние</option>
-      </select>
-    </div>
+        <label class="field">
+          <span class="label">Пол</span>
+          <select id="sex"></select>
+        </label>
 
-    <div class="control">
-      <label class="label" for="brand">Бренд</label>
-      <select id="brand" class="select">
-        <option value="">Все</option>
-      </select>
-    </div>
+        <label class="field">
+          <span class="label">Бренд</span>
+          <select id="brand"></select>
+        </label>
 
-    <div class="control">
-      <label class="label" for="size">Размер (EU)</label>
-      <select id="size" class="select">
-        <option value="">Все</option>
-      </select>
-    </div>
+        <label class="field">
+          <span class="label">Размер (EU)</span>
+          <select id="size"></select>
+        </label>
 
-    <div class="control">
-      <label class="label" for="status">Наличие</label>
-      <select id="status" class="select">
-        <option value="">Все</option>
-        <option value="in_stock">В наличии</option>
-        <option value="preorder">Под заказ</option>
-        <option value="sold_out">Нет</option>
-      </select>
-    </div>
+        <label class="field">
+          <span class="label">Наличие</span>
+          <select id="status"></select>
+        </label>
 
-    <div class="control">
-      <label class="label" for="sort">Сортировка</label>
-      <select id="sort" class="select">
-        <option value="relevance">По релевантности</option>
-        <option value="price_asc">Цена ↑</option>
-        <option value="price_desc">Цена ↓</option>
-        <option value="brand_asc">Бренд A→Z</option>
-        <option value="brand_desc">Бренд Z→A</option>
-      </select>
-    </div>
-  </section>
+        <label class="field">
+          <span class="label">Сортировка</span>
+          <select id="sort"></select>
+        </label>
+      </div>
+    </section>
 
-  <section class="meta" id="meta"></section>
+    <!-- Promo code -->
+    <section class="panel promo" id="promoPanel" aria-label="Промокод">
+      <div class="promo-title">Промокод для подписчиков</div>
+      <div class="promo-sub">Подписка не обязательна, но даёт скидки и доступ к кодам недели.</div>
 
-  <main class="grid" id="grid">
-    <div class="skeleton">Загрузка каталога…</div>
+      <div class="promo-row">
+        <input id="promoInput" type="text" placeholder="Промокод (например ROOM300)" autocomplete="off" />
+      </div>
+
+      <div class="promo-actions">
+        <button class="btn primary" id="promoApply" type="button">Применить</button>
+        <button class="btn ghost" id="promoReset" type="button">Сбросить</button>
+        <a class="btn telegram" id="promoTelegram" href="#" target="_blank" rel="noopener">Забрать код в Telegram</a>
+      </div>
+
+      <div class="promo-hint" id="promoHint" aria-live="polite"></div>
+    </section>
+
+    <div class="meta" id="meta">Загрузка…</div>
+
+    <section class="grid" id="grid" aria-label="Товары"></section>
+
+    <footer class="footer">
+      <a id="openSheet" href="#" target="_blank" rel="noopener">Источник</a>
+    </footer>
   </main>
 
-  <footer class="footer">
-    <div class="footer__hint">
-      <b>Фото:</b> в таблице указывай <code>photo_1..photo_8</code> (прямые ссылки Drive).<br>
-      <b>Обновления:</b> меняешь Google Sheets → жмёшь «Обновить».
-    </div>
-  </footer>
+  <div class="overlay" id="overlay" hidden></div>
 
   <script src="app.js"></script>
 </body>
