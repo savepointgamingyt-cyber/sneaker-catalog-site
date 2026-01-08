@@ -2,7 +2,7 @@
 // =========================
 // НАСТРОЙКИ (поменяй 2 строки)
 // =========================
-const DEFAULT_CSV_URL = "PASTE_CSV_URL_HERE";
+const DEFAULT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR0jBSjWhb8LlSj_nyeq_yQhRh889UhEwV-HjQM1MFNsA6Ou3ISYiaZYpBkBdPdxVJbwlB4TxsYHuiK/pub?gid=185458680&single=true&output=csv";
 // You can set CSV link without editing code:
 // 1) Add ?csv=YOUR_LINK to the site URL, or
 // 2) Paste it once into the in-page prompt (it will be saved in this browser).
