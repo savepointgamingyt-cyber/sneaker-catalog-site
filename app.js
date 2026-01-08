@@ -1,3 +1,4 @@
+window.addEventListener('DOMContentLoaded', () => {
 
 // =========================
 // НАСТРОЙКИ (поменяй 2 строки)
@@ -117,68 +118,6 @@ const el = {
   refreshBtn: document.getElementById("refreshBtn"),
   openSheet: document.getElementById("openSheet"),
 };
-
-// --- Mobile UI + Promocode (added) ---
-const ui = {
-  filtersToggle: document.getElementById("filtersToggle"),
-  filtersHide: document.getElementById("filtersHide"),
-  filtersPanel: document.getElementById("filtersPanel"),
-  overlay: document.getElementById("overlay"),
-  promoInput: document.getElementById("promoInput"),
-  promoApply: document.getElementById("promoApply"),
-  promoReset: document.getElementById("promoReset"),
-  promoTelegram: document.getElementById("promoTelegram"),
-  promoHint: document.getElementById("promoHint"),
-};
-
-function setFiltersOpen(open){
-  if(!ui.filtersPanel) return;
-  document.body.classList.toggle("filters-open", !!open);
-  if(ui.overlay) ui.overlay.hidden = !open;
-}
-if(ui.filtersToggle) ui.filtersToggle.addEventListener("click", ()=> setFiltersOpen(!document.body.classList.contains("filters-open")));
-if(ui.filtersHide) ui.filtersHide.addEventListener("click", ()=> setFiltersOpen(false));
-if(ui.overlay) ui.overlay.addEventListener("click", ()=> setFiltersOpen(false));
-
-const PROMO_CODES = {
-  "ROOM300": 300,
-};
-function normalizePromo(v){
-  return String(v || "").trim().toUpperCase().replace(/\s+/g,"");
-}
-let appliedPromo = normalizePromo(localStorage.getItem("promo_code") || "");
-function promoDiscount(){
-  return PROMO_CODES[appliedPromo] || 0;
-}
-function setPromo(code){
-  appliedPromo = normalizePromo(code);
-  if(!PROMO_CODES[appliedPromo]) appliedPromo = "";
-  localStorage.setItem("promo_code", appliedPromo);
-  if(ui.promoInput) ui.promoInput.value = appliedPromo;
-  if(ui.promoHint){
-    ui.promoHint.textContent = appliedPromo
-      ? `Промокод применён: ${appliedPromo}`
-      : "Промокод не применён.";
-  }
-}
-if(ui.promoApply) ui.promoApply.addEventListener("click", ()=>{
-  const code = ui.promoInput ? ui.promoInput.value : "";
-  setPromo(code);
-  // Перерисуем карточки, чтобы пересчитать цены
-  try { render(); } catch(e) {}
-});
-if(ui.promoReset) ui.promoReset.addEventListener("click", ()=>{
-  if(ui.promoInput) ui.promoInput.value = "";
-  setPromo("");
-  try { render(); } catch(e) {}
-});
-// Если у тебя есть Telegram-бот/канал — вставь сюда ссылку:
-if(ui.promoTelegram){
-  ui.promoTelegram.href = "https://t.me/";
-}
-setPromo(appliedPromo);
-// --- /Mobile UI + Promocode ---
-
 
 let PRODUCTS = [];
 let FILTERED = [];
@@ -404,15 +343,7 @@ function renderCard(p) {
         <div class="title">${escapeHtml(p.brand)} · ${escapeHtml(p.model)}</div>
         <div class="sub">${escapeHtml(sub)}</div>
         <div class="row">
-          ${promoDiscount() ? `
-            <div class="priceBlock">
-              <div class="priceOld">${money(p.price)} ₽</div>
-              <div class="price">${money(Math.max(0, p.price - promoDiscount()))} ₽</div>
-              <div class="discountLine">-${money(promoDiscount())} ₽</div>
-            </div>
-          ` : `
-            <div class="price">${money(p.price)} ₽</div>
-          `}
+          <div class="price">${money(p.price)} ₽</div>
           <div class="badge ${st.cls}">${st.text}</div>
         </div>
         <div class="sizes"><b>Размеры:</b></div>
@@ -520,3 +451,66 @@ el.refreshBtn.addEventListener("click", () => fetchProducts(true));
 });
 
 fetchProducts(false);
+
+
+// ===== Mobile filters toggle + Promo (static UI) =====
+(function(){
+  const filtersBtn = document.getElementById('filtersBtn');
+  const filtersPanel = document.getElementById('filtersPanel');
+  const filtersClose = document.getElementById('filtersClose');
+
+  function setFiltersOpen(open){
+    document.body.classList.toggle('filters-open', !!open);
+  }
+
+  if(filtersBtn && filtersPanel){
+    filtersBtn.addEventListener('click', () => {
+      setFiltersOpen(!document.body.classList.contains('filters-open'));
+      // авто-скролл к панели на десктопе
+      if(window.matchMedia('(min-width: 721px)').matches){
+        filtersPanel.scrollIntoView({behavior:'smooth', block:'start'});
+      }
+    });
+  }
+  if(filtersClose){
+    filtersClose.addEventListener('click', () => setFiltersOpen(false));
+  }
+  // клик по затемнению закрывает панель
+  document.addEventListener('click', (e) => {
+    if(!document.body.classList.contains('filters-open')) return;
+    const panel = document.getElementById('filtersPanel');
+    if(panel && !panel.contains(e.target) && e.target === document.body){
+      setFiltersOpen(false);
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') setFiltersOpen(false);
+  });
+
+  // Promo logic (front-end only)
+  const promoInput = document.getElementById('promoInput');
+  const promoApply = document.getElementById('promoApply');
+  const promoReset = document.getElementById('promoReset');
+  const promoNote = document.getElementById('promoNote');
+  const promoTg = document.getElementById('promoTg');
+
+  const PROMO_TG_LINK = 'https://t.me/'; // <- вставь ссылку на твой канал/бота
+  if(promoTg) promoTg.href = PROMO_TG_LINK;
+
+  function setPromo(value){
+    const v = (value || '').trim().toUpperCase();
+    try{ localStorage.setItem('promo', v); }catch(_){}
+    if(promoInput) promoInput.value = v;
+    if(promoNote){
+      promoNote.textContent = v ? `Промокод применён: ${v}` : '';
+    }
+  }
+  let saved = '';
+  try{ saved = localStorage.getItem('promo') || ''; }catch(_){}
+  if(saved) setPromo(saved);
+
+  if(promoApply) promoApply.addEventListener('click', ()=> setPromo(promoInput ? promoInput.value : ''));
+  if(promoReset) promoReset.addEventListener('click', ()=> setPromo(''));
+})();
+
+});

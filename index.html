@@ -2,96 +2,102 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Каталог кроссовок</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260108-1">
 </head>
 <body>
-  <header class="topbar">
+  <header class="header">
     <div class="brand">
       <div class="logo" aria-hidden="true">👟</div>
       <div class="brand-text">
-        <div class="brand-title">Каталог кроссовок</div>
-        <div class="brand-sub">Фото 1–8 · EU + CM</div>
+        <div class="h1">Каталог кроссовок</div>
+        <div class="sub">Фото 1–8 · EU + CM</div>
       </div>
     </div>
 
-    <div class="topbar-actions">
-      <button class="btn ghost" id="filtersToggle" type="button">Фильтры</button>
-      <button class="btn ghost" id="refreshBtn" type="button">Обновить</button>
+    <div class="header-actions">
+      <button class="btn btn-ghost" id="filtersBtn" type="button">Фильтры</button>
+      <button class="btn" id="refreshBtn" type="button">Обновить</button>
     </div>
   </header>
 
-  <main class="wrap">
-    <!-- Filters panel -->
-    <section class="panel filters" id="filtersPanel" aria-label="Фильтры">
-      <div class="filters-head">
-        <div class="filters-title">Фильтры</div>
-        <button class="btn ghost small" id="filtersHide" type="button">Скрыть</button>
+  <!-- Фильтры -->
+  <section class="panel" id="filtersPanel" aria-label="Фильтры">
+    <div class="panel-head">
+      <div class="panel-title">Фильтры</div>
+      <button class="btn btn-ghost" id="filtersClose" type="button">Скрыть</button>
+    </div>
+
+    <div class="controls">
+      <div class="control">
+        <div class="label">Поиск</div>
+        <input class="input" id="q" type="search" placeholder="Nike Dunk, Samba, код..." autocomplete="off" />
       </div>
 
-      <div class="filters-grid">
-        <label class="field">
-          <span class="label">Поиск</span>
-          <input id="q" type="search" placeholder="Nike Dunk, Samba, код…" autocomplete="off" />
-        </label>
-
-        <label class="field">
-          <span class="label">Пол</span>
-          <select id="sex"></select>
-        </label>
-
-        <label class="field">
-          <span class="label">Бренд</span>
-          <select id="brand"></select>
-        </label>
-
-        <label class="field">
-          <span class="label">Размер (EU)</span>
-          <select id="size"></select>
-        </label>
-
-        <label class="field">
-          <span class="label">Наличие</span>
-          <select id="status"></select>
-        </label>
-
-        <label class="field">
-          <span class="label">Сортировка</span>
-          <select id="sort"></select>
-        </label>
-      </div>
-    </section>
-
-    <!-- Promo code -->
-    <section class="panel promo" id="promoPanel" aria-label="Промокод">
-      <div class="promo-title">Промокод для подписчиков</div>
-      <div class="promo-sub">Подписка не обязательна, но даёт скидки и доступ к кодам недели.</div>
-
-      <div class="promo-row">
-        <input id="promoInput" type="text" placeholder="Промокод (например ROOM300)" autocomplete="off" />
+      <div class="control">
+        <div class="label">Пол</div>
+        <select class="select" id="sex">
+          <option value="">Все</option>
+          <option value="Мужские">Мужские</option>
+          <option value="Женские">Женские</option>
+          <option value="Унисекс">Унисекс</option>
+        </select>
       </div>
 
-      <div class="promo-actions">
-        <button class="btn primary" id="promoApply" type="button">Применить</button>
-        <button class="btn ghost" id="promoReset" type="button">Сбросить</button>
-        <a class="btn telegram" id="promoTelegram" href="#" target="_blank" rel="noopener">Забрать код в Telegram</a>
+      <div class="control">
+        <div class="label">Бренд</div>
+        <select class="select" id="brand">
+          <option value="">Все</option>
+        </select>
       </div>
 
-      <div class="promo-hint" id="promoHint" aria-live="polite"></div>
-    </section>
+      <div class="control">
+        <div class="label">Размер (EU)</div>
+        <select class="select" id="size">
+          <option value="">Все</option>
+        </select>
+      </div>
 
-    <div class="meta" id="meta">Загрузка…</div>
+      <div class="control">
+        <div class="label">Наличие</div>
+        <select class="select" id="status">
+          <option value="">Все</option>
+          <option value="В наличии">В наличии</option>
+          <option value="Нет">Нет</option>
+        </select>
+      </div>
 
-    <section class="grid" id="grid" aria-label="Товары"></section>
+      <div class="control">
+        <div class="label">Сортировка</div>
+        <select class="select" id="sort">
+          <option value="rel">По релевантности</option>
+          <option value="price_asc">Цена ↑</option>
+          <option value="price_desc">Цена ↓</option>
+        </select>
+      </div>
+    </div>
+  </section>
 
-    <footer class="footer">
-      <a id="openSheet" href="#" target="_blank" rel="noopener">Источник</a>
-    </footer>
-  </main>
+  <!-- Промокод -->
+  <section class="panel promo">
+    <div class="promo-title">Промокод для подписчиков</div>
+    <div class="promo-sub">Подписка не обязательна, но даёт скидки и доступ к кодам недели.</div>
+    <div class="promo-row">
+      <input class="input promo-input" id="promoInput" type="text" placeholder="Промокод (например ROOM300)" autocomplete="off" />
+      <button class="btn" id="promoApply" type="button">Применить</button>
+      <button class="btn btn-ghost" id="promoReset" type="button">Сбросить</button>
+      <a class="btn promo-tg" id="promoTg" href="#" target="_blank" rel="noopener">Забрать код в Telegram</a>
+    </div>
+    <div class="promo-note" id="promoNote"></div>
+  </section>
 
-  <div class="overlay" id="overlay" hidden></div>
+  <div class="meta" id="meta"></div>
 
-  <script src="app.js"></script>
+  <main class="grid" id="grid" aria-live="polite"></main>
+
+  <button class="open-sheet" id="openSheet" type="button" title="Открыть таблицу">Открыть таблицу</button>
+
+  <script src="app.js?v=20260108-1" defer></script>
 </body>
 </html>
