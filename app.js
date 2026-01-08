@@ -1,4 +1,3 @@
-window.addEventListener('DOMContentLoaded', () => {
 
 // =========================
 // НАСТРОЙКИ (поменяй 2 строки)
@@ -106,6 +105,48 @@ function productSearchBlob(p) {
 // =========================
 // UI
 // =========================
+// ===== Promo codes =====
+const PROMOS = {
+  "ROOM300": { type: "fixed", value: 300 } // -300 ₽
+};
+let ACTIVE_PROMO = (localStorage.getItem("activePromo") || "").trim().toUpperCase();
+function promoConfig(){
+  return PROMOS[ACTIVE_PROMO] || null;
+}
+function applyPromoToPrice(base){
+  const cfg = promoConfig();
+  if(!cfg) return { final: base, delta: 0 };
+  if(cfg.type === "fixed"){
+    const delta = Math.min(cfg.value, Math.max(0, base));
+    return { final: Math.max(0, base - delta), delta };
+  }
+  return { final: base, delta: 0 };
+}
+function priceModel(p){
+  const base = toNumber(p.price);
+  const old = toNumber(p.old_price);
+  const promo = applyPromoToPrice(base);
+  const finalPrice = promo.final;
+  const delta = promo.delta;
+  // pick the best old price to show (old_price if it's higher, otherwise base when promo is active)
+  const showOld = (old && old > finalPrice) ? old : ((delta > 0 && base > finalPrice) ? base : 0);
+  return { base, old, final: finalPrice, delta, showOld };
+}
+function priceHTML(p){
+  const m = priceModel(p);
+  const oldStr = m.showOld ? `<span class="price-old">${money(m.showOld)} ₽</span>` : "";
+  const deltaStr = m.delta ? `<div class="price-delta">−${money(m.delta)} ₽ по промокоду</div>` : "";
+  return `
+    <div class="price-wrap">
+      <div class="price-line">
+        ${oldStr}
+        <span class="price-final">${money(m.final)} ₽</span>
+      </div>
+      ${deltaStr}
+    </div>
+  `;
+}
+
 const el = {
   grid: document.getElementById("grid"),
   meta: document.getElementById("meta"),
@@ -117,6 +158,16 @@ const el = {
   sort: document.getElementById("sort"),
   refreshBtn: document.getElementById("refreshBtn"),
   openSheet: document.getElementById("openSheet"),
+
+  filtersToggle: document.getElementById("filtersToggle"),
+  filtersClose: document.getElementById("filtersClose"),
+  filtersBackdrop: document.getElementById("filtersBackdrop"),
+  promoInput: document.getElementById("promoInput"),
+  promoApply: document.getElementById("promoApply"),
+  promoReset: document.getElementById("promoReset"),
+  promoTelegram: document.getElementById("promoTelegram"),
+  promoMsg: document.getElementById("promoMsg"),
+
 };
 
 let PRODUCTS = [];
@@ -343,7 +394,7 @@ function renderCard(p) {
         <div class="title">${escapeHtml(p.brand)} · ${escapeHtml(p.model)}</div>
         <div class="sub">${escapeHtml(sub)}</div>
         <div class="row">
-          <div class="price">${money(p.price)} ₽</div>
+          ${priceHTML(p)}
           <div class="badge ${st.cls}">${st.text}</div>
         </div>
         <div class="sizes"><b>Размеры:</b></div>
@@ -451,66 +502,3 @@ el.refreshBtn.addEventListener("click", () => fetchProducts(true));
 });
 
 fetchProducts(false);
-
-
-// ===== Mobile filters toggle + Promo (static UI) =====
-(function(){
-  const filtersBtn = document.getElementById('filtersBtn');
-  const filtersPanel = document.getElementById('filtersPanel');
-  const filtersClose = document.getElementById('filtersClose');
-
-  function setFiltersOpen(open){
-    document.body.classList.toggle('filters-open', !!open);
-  }
-
-  if(filtersBtn && filtersPanel){
-    filtersBtn.addEventListener('click', () => {
-      setFiltersOpen(!document.body.classList.contains('filters-open'));
-      // авто-скролл к панели на десктопе
-      if(window.matchMedia('(min-width: 721px)').matches){
-        filtersPanel.scrollIntoView({behavior:'smooth', block:'start'});
-      }
-    });
-  }
-  if(filtersClose){
-    filtersClose.addEventListener('click', () => setFiltersOpen(false));
-  }
-  // клик по затемнению закрывает панель
-  document.addEventListener('click', (e) => {
-    if(!document.body.classList.contains('filters-open')) return;
-    const panel = document.getElementById('filtersPanel');
-    if(panel && !panel.contains(e.target) && e.target === document.body){
-      setFiltersOpen(false);
-    }
-  });
-  document.addEventListener('keydown', (e) => {
-    if(e.key === 'Escape') setFiltersOpen(false);
-  });
-
-  // Promo logic (front-end only)
-  const promoInput = document.getElementById('promoInput');
-  const promoApply = document.getElementById('promoApply');
-  const promoReset = document.getElementById('promoReset');
-  const promoNote = document.getElementById('promoNote');
-  const promoTg = document.getElementById('promoTg');
-
-  const PROMO_TG_LINK = 'https://t.me/'; // <- вставь ссылку на твой канал/бота
-  if(promoTg) promoTg.href = PROMO_TG_LINK;
-
-  function setPromo(value){
-    const v = (value || '').trim().toUpperCase();
-    try{ localStorage.setItem('promo', v); }catch(_){}
-    if(promoInput) promoInput.value = v;
-    if(promoNote){
-      promoNote.textContent = v ? `Промокод применён: ${v}` : '';
-    }
-  }
-  let saved = '';
-  try{ saved = localStorage.getItem('promo') || ''; }catch(_){}
-  if(saved) setPromo(saved);
-
-  if(promoApply) promoApply.addEventListener('click', ()=> setPromo(promoInput ? promoInput.value : ''));
-  if(promoReset) promoReset.addEventListener('click', ()=> setPromo(''));
-})();
-
-});
